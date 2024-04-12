@@ -27,3 +27,5 @@ Please replace the placeholders in the scripts with your actual AWS resource IDs
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
+
+![plan.png](plan.png)

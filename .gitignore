@@ -1,0 +1,7 @@
+vpn/tech_space.ovpn
+terraform.tfstate
+terraform.tfstate.backup
+.terraform.lock.hcl
+.terraform
+main-key.pem
+tfplan

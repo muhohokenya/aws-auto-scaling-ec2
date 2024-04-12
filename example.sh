@@ -1,5 +1,6 @@
 #!/bin/bash
 
+
 # Update the package lists for upgrades and new package installations
 sudo apt-get update
 

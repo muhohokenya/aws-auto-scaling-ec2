@@ -5,3 +5,4 @@ terraform.tfstate.backup
 .terraform
 main-key.pem
 tfplan
+.idea

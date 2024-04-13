@@ -195,14 +195,6 @@ resource "aws_security_group" "tech_space_elb_public_security_group" {
     cidr_blocks = ["0.0.0.0/0"] //Allow traffic from the Internet
   }
 
-  egress {
-    description = "Allow outbound traffic only to the private elb-sg"
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    security_groups = [aws_security_group.tech_space_private_elb_security_group.id]
-  }
-
   vpc_id = aws_vpc.tech_space_vpc.id
 }
 
@@ -210,14 +202,6 @@ resource "aws_security_group" "tech_space_elb_public_security_group" {
 resource "aws_security_group" "tech_space_private_elb_security_group" {
   name        = "tech-space-elb-private-security-group"
   description = "Tech space Elb Private Security group"
-
-  ingress {
-    description = "Allow traffic on port 80 from the Tech space Elb Public security group"
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    security_groups = [aws_security_group.tech_space_elb_public_security_group.id]
-  }
 
   egress {
     description = "Allow all outbound traffic"
@@ -229,6 +213,27 @@ resource "aws_security_group" "tech_space_private_elb_security_group" {
 
   vpc_id = aws_vpc.tech_space_vpc.id
 }
+
+// Add the egress rule to the public security group
+resource "aws_security_group_rule" "public_sg_egress_rule" {
+  type              = "egress"
+  from_port         = 0
+  to_port           = 0
+  protocol          = "-1"
+  security_group_id = aws_security_group.tech_space_elb_public_security_group.id
+  source_security_group_id = aws_security_group.tech_space_private_elb_security_group.id
+}
+
+// Add the ingress rule to the private security group
+resource "aws_security_group_rule" "private_sg_ingress_rule" {
+  type              = "ingress"
+  from_port         = 80
+  to_port           = 80
+  protocol          = "tcp"
+  security_group_id = aws_security_group.tech_space_private_elb_security_group.id
+  source_security_group_id = aws_security_group.tech_space_elb_public_security_group.id
+}
+
 
 //Public ELB
 resource "aws_lb" "tech_space_elb" {

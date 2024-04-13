@@ -182,16 +182,41 @@ resource "aws_launch_template" "tech_space_launch_template" {
   user_data = filebase64("${path.module}/example.sh")
 }
 
-resource "aws_security_group" "tech_space_elb_security_group" {
-  name        = "tech-space-elb-security-group"
-  description = "Tech space Elb security group"
+/*Public elb security group*/
+resource "aws_security_group" "tech_space_elb_public_security_group" {
+  name        = "tech-space-elb-public-security-group"
+  description = "Tech space Elb Public security group"
 
   ingress {
     description = "Allow traffic on port 80 from anywhere"
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = ["0.0.0.0/0"] //Allow traffic from the Internet
+  }
+
+  egress {
+    description = "Allow outbound traffic only to the private elb-sg"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    security_groups = [aws_security_group.tech_space_private_elb_security_group.id]
+  }
+
+  vpc_id = aws_vpc.tech_space_vpc.id
+}
+
+//Private Elb Security group
+resource "aws_security_group" "tech_space_private_elb_security_group" {
+  name        = "tech-space-elb-private-security-group"
+  description = "Tech space Elb Private Security group"
+
+  ingress {
+    description = "Allow traffic on port 80 from the Tech space Elb Public security group"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    security_groups = [aws_security_group.tech_space_elb_public_security_group.id]
   }
 
   egress {
@@ -205,13 +230,22 @@ resource "aws_security_group" "tech_space_elb_security_group" {
   vpc_id = aws_vpc.tech_space_vpc.id
 }
 
-
+//Public ELB
 resource "aws_lb" "tech_space_elb" {
   name               = "TechSpaceElb"
   internal           = false
   load_balancer_type = "application"
   subnets            = [aws_subnet.public_subnet.id,aws_subnet.public_subnet_2.id]
-  security_groups    = [aws_security_group.tech_space_elb_security_group.id]
+  security_groups    = [aws_security_group.tech_space_elb_public_security_group.id]
+}
+
+//Private ELB
+resource "aws_lb" "tech_space_private_elb" {
+  name               = "TechSpacePrivateElb"
+  internal           = true
+  load_balancer_type = "application"
+  subnets            = [aws_subnet.public_subnet.id,aws_subnet.public_subnet_2.id]
+  security_groups    = [aws_security_group.tech_space_private_elb_security_group.id]
 }
 
 resource "aws_lb_target_group" "tech_space_target_group" {
@@ -233,7 +267,7 @@ resource "aws_lb_target_group" "tech_space_target_group" {
 }
 
 resource "aws_lb_listener" "front_end" {
-  load_balancer_arn = aws_lb.tech_space_elb.arn
+  load_balancer_arn = aws_lb.tech_space_private_elb.arn
   port              = "80"
   protocol          = "HTTP"
 
@@ -242,6 +276,8 @@ resource "aws_lb_listener" "front_end" {
     target_group_arn = aws_lb_target_group.tech_space_target_group.arn
   }
 }
+
+
 resource "aws_autoscaling_group" "tech_space_autoscaling_group" {
   desired_capacity   = 3
   max_size           = 4
